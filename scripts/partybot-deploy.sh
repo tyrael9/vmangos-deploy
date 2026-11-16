@@ -278,7 +278,7 @@ case "${1:-help}" in
     [[ $# -le 2 ]] || { usage; exit 2; }
     tail_lines="${2:-100}"
     [[ "$tail_lines" =~ ^[0-9]+$ ]] || die "Tail line count must be an integer."
-    compose_active logs --tail="$tail_lines" mangosd realmd
+    compose_active logs --timestamps --tail="$tail_lines" mangosd realmd
     ;;
   help|-h|--help)
     usage
