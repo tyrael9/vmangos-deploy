@@ -58,6 +58,47 @@ To change the health-check timeout for one invocation:
 PARTYBOT_HEALTH_TIMEOUT=900 ./scripts/partybot-deploy.sh deploy partybot-daba395
 ```
 
+
+## One-command diagnostics
+
+The read-only diagnostics script collects the effective server image/status,
+the two PartyBot config flags, and a timestamped tail of the current
+`mangosd`/`realmd` logs. It parses `[PartyBotShadow]` summaries and prints a
+small PASS/WARN/FAIL report. It also writes a mode-0600 JSON report to
+`.partybot/diagnostics/latest.json`.
+
+Run it from the deployment repository on the Oracle host:
+
+```sh
+bash scripts/partybot-diagnostics.sh
+```
+
+By default it examines the last 5,000 log lines and considers the Shadow
+heartbeat stale after 120 seconds. Both can be adjusted without editing files:
+
+```sh
+PARTYBOT_DIAGNOSTICS_TAIL=10000 PARTYBOT_DIAGNOSTICS_STALE_SECONDS=180 \
+  bash scripts/partybot-diagnostics.sh
+```
+
+The script uses the deployment helper's effective Compose configuration,
+including its private PartyBot override. It does not restart containers, run
+SQL, inspect or modify database services/volumes, or change configuration.
+The `logs` helper includes Docker timestamps so freshness can be assessed.
+
+Interpretation:
+- `PlayerBot.EngineShadow=1` and `PlayerBot.DecisionTrace=1` are required for
+  heartbeat summaries.
+- `candidates=0 selected=0` is expected until runtime strategies/actions are
+  registered; it is not a failure.
+- No heartbeat is a WARN, not proof of a code defect: Shadow may be disabled,
+  no eligible party bot may be active, the log window may be too short, or
+  snapshot construction may not have completed.
+- The report is a convenience summary of config and logs, not proof of correct
+  in-game decisions. Share `.partybot/diagnostics/latest.json` for analysis;
+  it contains bot/group/map identifiers and should be treated as server
+  diagnostic data.
+
 ## Roll back
 
 ```sh
