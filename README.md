@@ -164,6 +164,8 @@ The prompt that works best depends on the agent and the model.
   `compose.yaml`.
 - [Breaking changes](docs/breaking-changes.md): the changes you have to act on
   when you update.
+- [PartyBot test deployment](docs/partybot-testing.md): deploy, inspect, and
+  roll back custom PartyBot images without touching the database.
 
 ## Modifications
 
