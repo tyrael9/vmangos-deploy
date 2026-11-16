@@ -64,6 +64,20 @@ def parse_timestamp(line):
     except ValueError:
         return None
 
+status_re = re.compile(r"\\[PartyBotShadowStatus\\]\\s+bot=(\\d+)\\s+group=(\\d+)\\s+map=(\\d+)\\s+instance=(\\d+)\\s+status=([A-Za-z0-9_]+)")
+shadow_statuses = []
+for line in pathlib.Path(logs_path).read_text(errors="replace").splitlines():
+    match = status_re.search(line)
+    if match:
+        stamp = parse_timestamp(line)
+        shadow_statuses.append({
+            "bot": int(match.group(1)), "group": int(match.group(2)),
+            "map": int(match.group(3)), "instance": int(match.group(4)),
+            "status": match.group(5),
+            "timestamp": stamp.isoformat() if stamp else None,
+            "_time": stamp,
+        })
+
 shadow_re = re.compile(
     r"\[PartyBotShadow\]\s+bot=(\d+)\s+group=(\d+)\s+map=(\d+)\s+"
     r"instance=(\d+)\s+epoch=(\d+)\s+members=(\d+)\s+hostiles=(\d+)\s+"
@@ -105,7 +119,10 @@ else:
     check("PASS", "decision_trace_config", "PlayerBot.DecisionTrace is enabled")
 
 if not records:
-    check("WARN", "shadow_heartbeat", "No parseable [PartyBotShadow] summaries in the selected log window")
+    if shadow_statuses and all(s["status"] == "no_supported_group" for s in shadow_statuses):
+        check("INFO", "shadow_heartbeat", "Shadow is enabled, but sampled bots currently have no supported normal party")
+    else:
+        check("WARN", "shadow_heartbeat", "No parseable [PartyBotShadow] evaluation summaries in the selected log window")
 else:
     latest = max((r["_time"] for r in records if r["_time"]), default=None)
     if latest is None:
@@ -135,6 +152,14 @@ else:
     else:
         check("INFO", "engine_candidates", "Nonzero candidate/selection counts observed; inspect strategy diagnostics before enabling execution")
 
+status_counts = {}
+for item in shadow_statuses:
+    status_counts[item["status"]] = status_counts.get(item["status"], 0) + 1
+for status, count in sorted(status_counts.items()):
+    if status in ("snapshot_unavailable", "bot_missing_from_snapshot", "coordinator_unavailable"):
+        check("WARN", "shadow_runtime_status", f"{status}: {count} sampled status records")
+    elif status == "no_supported_group":
+        check("INFO", "shadow_runtime_status", f"no_supported_group: {count} sampled status records")
 if unparsed_shadow:
     check("WARN", "log_format", f"{unparsed_shadow} Shadow lines did not match the expected key/value format")
 
@@ -178,7 +203,7 @@ print("\nPartyBot diagnostics")
 print("====================")
 print(f"Generated: {report['generated_at']}")
 print(f"Shadow config: {engine_shadow} | DecisionTrace: {decision_trace}")
-print(f"Parsed summaries: {len(records)} | Bots: {len(report['log_window']['bots'])}")
+print(f"Parsed summaries: {len(records)} | Status records: {len(shadow_statuses)} | Bots: {len(report['log_window']['bots'])}")
 print(f"Observed shards: {len(report['log_window']['shards'])}")
 print(f"Max members: {report['log_window']['members_max']} | Max hostiles: {report['log_window']['hostiles_max']}")
 print(f"Candidates total: {report['log_window']['candidates_total']} | Selected total: {report['log_window']['selected_total']}")
