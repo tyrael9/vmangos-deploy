@@ -233,8 +233,8 @@ do_rollback() {
   require_server_services
 
   log "Restoring the previous mangosd and realmd images."
-  compose_with_override "$ROLLBACK_OVERRIDE" pull mangosd realmd
-  compose_with_override "$ROLLBACK_OVERRIDE" up -d --no-deps --pull never mangosd realmd
+  # Reuse the previously pulled image locally; do not refresh a mutable tag.
+  compose_with_override "$ROLLBACK_OVERRIDE" up -d --no-deps --pull missing mangosd realmd
   wait_for_health || die "Rollback did not become healthy. Inspect logs before retrying."
 
   # Keep the just-replaced version as the next rollback target (toggle).
