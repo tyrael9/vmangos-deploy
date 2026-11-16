@@ -64,7 +64,7 @@ def parse_timestamp(line):
     except ValueError:
         return None
 
-status_re = re.compile(r"\\[PartyBotShadowStatus\\]\\s+bot=(\\d+)\\s+group=(\\d+)\\s+map=(\\d+)\\s+instance=(\\d+)\\s+status=([A-Za-z0-9_]+)")
+status_re = re.compile(r"\[PartyBotShadowStatus\]\s+bot=(\d+)\s+group=(\d+)\s+map=(\d+)\s+instance=(\d+)\s+status=([A-Za-z0-9_]+)")
 shadow_statuses = []
 for line in pathlib.Path(logs_path).read_text(errors="replace").splitlines():
     match = status_re.search(line)
