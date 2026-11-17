@@ -63,8 +63,8 @@ PARTYBOT_HEALTH_TIMEOUT=900 ./scripts/partybot-deploy.sh deploy partybot-daba395
 
 The read-only diagnostics script collects the effective server image/status,
 the two PartyBot config flags, and a timestamped tail of the current
-`mangosd`/`realmd` logs. It parses `[PartyBotShadow]` summaries and prints a
-small PASS/WARN/FAIL report. It also writes a mode-0600 JSON report to
+`mangosd`/`realmd` logs. It parses `[PartyBotShadow]` summaries and
+`[PartyBotShadowDecision]` candidate details, then prints a PASS/WARN/FAIL report. It also writes a mode-0600 JSON report to
 `.partybot/diagnostics/latest.json`.
 
 Run it from the deployment repository on the Oracle host:
@@ -89,11 +89,17 @@ The `logs` helper includes Docker timestamps so freshness can be assessed.
 Interpretation:
 - `PlayerBot.EngineShadow=1` and `PlayerBot.DecisionTrace=1` are required for
   heartbeat summaries.
-- `candidates=0 selected=0` is expected until runtime strategies/actions are
-  registered; it is not a failure.
+- Candidate counts depend on live combat state and bot role. Idle groups may
+  legitimately have no candidate decisions.
+- `recent_shadow_decisions` includes the most recent 50 candidate details,
+  including strategy, target GUID, priority, selection status and reason. The
+  console output prints the latest 12 for quick inspection.
 - No heartbeat is a WARN, not proof of a code defect: Shadow may be disabled,
   no eligible party bot may be active, the log window may be too short, or
   snapshot construction may not have completed.
+- Shadow decision records are coarse triage/target proposals, not spell-level
+  validation or proof that a target choice is tactically correct. Legacy remains
+  the only action executor.
 - The report is a convenience summary of config and logs, not proof of correct
   in-game decisions. Share `.partybot/diagnostics/latest.json` for analysis;
   it contains bot/group/map identifiers and should be treated as server
