@@ -102,6 +102,36 @@ for line in pathlib.Path(logs_path).read_text(errors="replace").splitlines():
         "_time": stamp,
     })
 
+decision_re = re.compile(
+    r"\[PartyBotShadowDecision\]\s+bot=(\d+)\s+group=(\d+)\s+"
+    r"map=(\d+)\s+instance=(\d+)\s+epoch=(\d+)\s+"
+    r"role=([A-Za-z0-9_]+)\s+strategy=([A-Za-z0-9_]+)\s+"
+    r"action=([A-Za-z0-9_]+)\s+target=(\d+)\s+"
+    r"priority=(-?(?:\d+(?:\.\d*)?|\.\d+))\s+"
+    r"status=([A-Za-z0-9_]+)\s+reason=([A-Za-z0-9_]+)"
+)
+decisions = []
+unparsed_decisions = 0
+for line in pathlib.Path(logs_path).read_text(errors="replace").splitlines():
+    if "[PartyBotShadowDecision]" not in line:
+        continue
+    match = decision_re.search(line)
+    if not match:
+        unparsed_decisions += 1
+        continue
+    values = match.groups()
+    stamp = parse_timestamp(line)
+    decisions.append({
+        "bot": int(values[0]), "group": int(values[1]),
+        "map": int(values[2]), "instance": int(values[3]),
+        "epoch": int(values[4]), "role": values[5],
+        "strategy": values[6], "action": values[7],
+        "target": int(values[8]), "priority": float(values[9]),
+        "status": values[10], "reason": values[11],
+        "timestamp": stamp.isoformat() if stamp else None,
+        "_time": stamp,
+    })
+
 engine_shadow = read_config_value("PlayerBot.EngineShadow", "0")
 decision_trace = read_config_value("PlayerBot.DecisionTrace", "0")
 checks = []
@@ -162,6 +192,12 @@ for status, count in sorted(status_counts.items()):
         check("INFO", "shadow_runtime_status", f"no_supported_group: {count} sampled status records")
 if unparsed_shadow:
     check("WARN", "log_format", f"{unparsed_shadow} Shadow lines did not match the expected key/value format")
+if unparsed_decisions:
+    check("WARN", "decision_log_format", f"{unparsed_decisions} Shadow decision lines did not match the expected key/value format")
+if decisions:
+    check("INFO", "shadow_decisions", f"Parsed {len(decisions)} role/strategy candidate details; {sum(d['status'] == 'selected' for d in decisions)} selected")
+else:
+    check("INFO", "shadow_decisions", "No candidate detail lines in this log window; this can be normal when the party is idle or no strategy trigger is active")
 
 status_text = pathlib.Path(status_path).read_text(errors="replace")
 image_lines = [line.strip() for line in status_text.splitlines() if "ghcr.io/" in line]
@@ -182,18 +218,30 @@ report = {
         "hostiles_max": max((r["hostiles"] for r in records), default=0),
         "members_max": max((r["members"] for r in records), default=0),
     },
+    "shadow_decisions": {
+        "count": len(decisions),
+        "selected": sum(d["status"] == "selected" for d in decisions),
+        "roles": sorted({d["role"] for d in decisions}),
+        "strategies": sorted({d["strategy"] for d in decisions}),
+        "status_counts": {status: sum(d["status"] == status for d in decisions)
+                          for status in sorted({d["status"] for d in decisions})},
+    },
     "image_references": image_lines,
     "checks": checks,
     "limitations": [
         "This is a read-only log/config/container diagnostic, not proof of correct in-game decisions.",
         "A missing heartbeat can mean Shadow is disabled, no eligible party bot is active, the log window is too short, or snapshot construction did not complete.",
-        "The current engine has no registered runtime strategies/actions; zero candidates is expected.",
-        "Legacy remains the only action executor in Shadow mode.",
+        "Shadow decisions are coarse triage/target proposals, not spell validation or proof of tactically correct actions.",
+        "Human party members without CombatBotBaseAI role metadata remain role=unknown; Main Tank is tracked separately.",
+        "Legacy remains the only action executor in Shadow mode; Shadow never calls ExecuteSelected.",
     ],
 }
 for record in records:
     record.pop("_time", None)
+for decision in decisions:
+    decision.pop("_time", None)
 report["recent_shadow_summaries"] = records[-20:]
+report["recent_shadow_decisions"] = decisions[-50:]
 
 out = pathlib.Path(output_dir) / "latest.json"
 out.write_text(json.dumps(report, indent=2) + "\n")
@@ -207,6 +255,14 @@ print(f"Parsed summaries: {len(records)} | Status records: {len(shadow_statuses)
 print(f"Observed shards: {len(report['log_window']['shards'])}")
 print(f"Max members: {report['log_window']['members_max']} | Max hostiles: {report['log_window']['hostiles_max']}")
 print(f"Candidates total: {report['log_window']['candidates_total']} | Selected total: {report['log_window']['selected_total']}")
+print(f"Decision details: {report['shadow_decisions']['count']} | Selected details: {report['shadow_decisions']['selected']}")
+if report["shadow_decisions"]["strategies"]:
+    print("Strategies: " + ", ".join(report["shadow_decisions"]["strategies"]))
+for decision in report["recent_shadow_decisions"][-12:]:
+    print("  decision: "
+          f"bot={decision['bot']} role={decision['role']} strategy={decision['strategy']} "
+          f"target={decision['target']} priority={decision['priority']:.2f} "
+          f"status={decision['status']} reason={decision['reason']}")
 if image_lines:
     print("Images:")
     for line in image_lines:
