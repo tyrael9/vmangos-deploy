@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --encounter-id)
-      (( TRACE_SELECTOR_SET == 0 )) || die "Choose only one encounter selector."
+      ((TRACE_SELECTOR_SET == 0)) || die "Choose only one encounter selector."
       [[ $# -ge 2 && "$2" =~ ^[1-9][0-9]*$ ]] || die "--encounter-id requires a positive decimal ID."
       TRACE_SELECTOR_SET=1
       TRACE_SELECTOR=(--encounter-id "$2")
@@ -56,7 +56,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --since)
-      (( TRACE_SELECTOR_SET == 0 )) || die "Choose only one encounter selector."
+      ((TRACE_SELECTOR_SET == 0)) || die "Choose only one encounter selector."
       [[ $# -ge 2 && -n "$2" ]] || die "--since requires an ISO-8601 timestamp."
       TRACE_SELECTOR_SET=1
       TRACE_SINCE="$2"
