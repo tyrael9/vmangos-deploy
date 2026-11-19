@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 tyrael9 <https://github.com/tyrael9>
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Build read-only, encounter-scoped reports from PartyBotEngine log lines.
 
