@@ -21,7 +21,10 @@ TRACE_SINCE=""
 TRACE_UNTIL=""
 
 log() { printf '[partybot-diagnostics] %s\n' "$*"; }
-die() { log "ERROR: $*" >&2; exit 1; }
+die() {
+  log "ERROR: $*" >&2
+  exit 1
+}
 
 usage() {
   cat <<'USAGE'
@@ -38,7 +41,7 @@ USAGE
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all)
-      (( TRACE_SELECTOR_SET == 0 )) || die "Choose only one encounter selector."
+      ((TRACE_SELECTOR_SET == 0)) || die "Choose only one encounter selector."
       TRACE_SELECTOR_SET=1
       TRACE_SELECTOR=(--all)
       TRACE_SELECTOR_LABEL="all"
@@ -65,7 +68,7 @@ while [[ $# -gt 0 ]]; do
       TRACE_UNTIL="$2"
       shift 2
       ;;
-    -h|--help)
+    -h | --help)
       usage
       exit 0
       ;;
@@ -348,8 +351,8 @@ if grep -Fq "[PartyBotEngineTrace]" "$tmp_logs"; then
   mkdir -p "$TRACE_REPORT_DIR"
   chmod 700 "$PROJECT_DIR/.partybot" "$STATE_DIR" "$TRACE_REPORT_DIR"
   log "Generating structured encounter reports ($TRACE_SELECTOR_LABEL)..."
-  python3 "$TRACE_REPORTER" "$tmp_logs" "${TRACE_SELECTOR[@]}" --output-dir "$TRACE_REPORT_DIR" \
-    || die "Encounter report generation failed for selector: $TRACE_SELECTOR_LABEL"
+  python3 "$TRACE_REPORTER" "$tmp_logs" "${TRACE_SELECTOR[@]}" --output-dir "$TRACE_REPORT_DIR" ||
+    die "Encounter report generation failed for selector: $TRACE_SELECTOR_LABEL"
   log "Encounter reports saved under $TRACE_REPORT_DIR (mode 0600 files)."
 else
   if [[ "$TRACE_SELECTOR_LABEL" == "all" ]]; then
