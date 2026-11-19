@@ -56,7 +56,10 @@ run_diagnostics() {
 }
 
 assert_file() {
-  [[ -f "$1" ]] || { echo "Missing expected file: $1" >&2; exit 1; }
+  [[ -f "$1" ]] || {
+    echo "Missing expected file: $1" >&2
+    exit 1
+  }
 }
 
 assert_mode() {
