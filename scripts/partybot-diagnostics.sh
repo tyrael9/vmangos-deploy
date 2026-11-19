@@ -12,9 +12,73 @@ CONFIG_FILE="$PROJECT_DIR/config/mangosd.conf"
 TAIL_LINES="${PARTYBOT_DIAGNOSTICS_TAIL:-5000}"
 STALE_SECONDS="${PARTYBOT_DIAGNOSTICS_STALE_SECONDS:-120}"
 STATE_DIR="$PROJECT_DIR/.partybot/diagnostics"
+TRACE_REPORTER="$SCRIPT_DIR/partybot-trace-report.py"
+TRACE_REPORT_DIR="$STATE_DIR/encounters"
+TRACE_SELECTOR=(--all)
+TRACE_SELECTOR_LABEL="all"
+TRACE_SELECTOR_SET=0
+TRACE_SINCE=""
+TRACE_UNTIL=""
 
 log() { printf '[partybot-diagnostics] %s\n' "$*"; }
 die() { log "ERROR: $*" >&2; exit 1; }
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  bash scripts/partybot-diagnostics.sh [--all]
+  bash scripts/partybot-diagnostics.sh --encounter-id <positive-id>
+  bash scripts/partybot-diagnostics.sh --since <ISO-8601> --until <ISO-8601>
+
+Default: report every encounter found in the collected log tail.
+All modes are read-only and operate only on the selected mangosd/realmd logs.
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all)
+      (( TRACE_SELECTOR_SET == 0 )) || die "Choose only one encounter selector."
+      TRACE_SELECTOR_SET=1
+      TRACE_SELECTOR=(--all)
+      TRACE_SELECTOR_LABEL="all"
+      shift
+      ;;
+    --encounter-id)
+      (( TRACE_SELECTOR_SET == 0 )) || die "Choose only one encounter selector."
+      [[ $# -ge 2 && "$2" =~ ^[1-9][0-9]*$ ]] || die "--encounter-id requires a positive decimal ID."
+      TRACE_SELECTOR_SET=1
+      TRACE_SELECTOR=(--encounter-id "$2")
+      TRACE_SELECTOR_LABEL="encounter $2"
+      shift 2
+      ;;
+    --since)
+      (( TRACE_SELECTOR_SET == 0 )) || die "Choose only one encounter selector."
+      [[ $# -ge 2 && -n "$2" ]] || die "--since requires an ISO-8601 timestamp."
+      TRACE_SELECTOR_SET=1
+      TRACE_SINCE="$2"
+      TRACE_SELECTOR_LABEL="time window"
+      shift 2
+      ;;
+    --until)
+      [[ -n "$TRACE_SINCE" && -z "$TRACE_UNTIL" && $# -ge 2 && -n "$2" ]] || die "--until must follow --since and requires an ISO-8601 timestamp."
+      TRACE_UNTIL="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      die "Unknown argument: $1"
+      ;;
+  esac
+done
+
+if [[ -n "$TRACE_SINCE" || -n "$TRACE_UNTIL" ]]; then
+  [[ -n "$TRACE_SINCE" && -n "$TRACE_UNTIL" ]] || die "Both --since and --until are required."
+  TRACE_SELECTOR=(--since "$TRACE_SINCE" --until "$TRACE_UNTIL")
+fi
 
 [[ -x "$DEPLOY_HELPER" ]] || die "Missing executable $DEPLOY_HELPER"
 [[ -f "$CONFIG_FILE" ]] || die "Missing $CONFIG_FILE"
@@ -275,3 +339,21 @@ fails = sum(c["status"] == "FAIL" for c in checks)
 warns = sum(c["status"] == "WARN" for c in checks)
 print(f"\nResult: {'FAIL' if fails else ('WARN' if warns else 'PASS')} ({fails} fail, {warns} warn)")
 PY
+
+# Encounter reports are generated from the same timestamped log snapshot above.
+# The collector reads files only; it never connects to MariaDB or Docker.
+if grep -Fq "[PartyBotEngineTrace]" "$tmp_logs"; then
+  [[ -f "$TRACE_REPORTER" ]] || die "Missing encounter report collector: $TRACE_REPORTER"
+  mkdir -p "$TRACE_REPORT_DIR"
+  chmod 700 "$PROJECT_DIR/.partybot" "$STATE_DIR" "$TRACE_REPORT_DIR"
+  log "Generating structured encounter reports ($TRACE_SELECTOR_LABEL)..."
+  python3 "$TRACE_REPORTER" "$tmp_logs" "${TRACE_SELECTOR[@]}" --output-dir "$TRACE_REPORT_DIR" \
+    || die "Encounter report generation failed for selector: $TRACE_SELECTOR_LABEL"
+  log "Encounter reports saved under $TRACE_REPORT_DIR (mode 0600 files)."
+else
+  if [[ "$TRACE_SELECTOR_LABEL" == "all" ]]; then
+    log "INFO: No structured [PartyBotEngineTrace] records in the selected log window."
+  else
+    die "No structured encounter trace records found for selector: $TRACE_SELECTOR_LABEL"
+  fi
+fi

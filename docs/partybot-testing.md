@@ -67,11 +67,34 @@ the two PartyBot config flags, and a timestamped tail of the current
 `[PartyBotShadowDecision]` candidate details, then prints a PASS/WARN/FAIL report. It also writes a mode-0600 JSON report to
 `.partybot/diagnostics/latest.json`.
 
+When structured `[PartyBotEngineTrace]` records are present in the collected
+log tail, the script invokes the bundled, standard-library-only
+`scripts/partybot-trace-report.py` collector. By default it writes one
+Markdown timeline and one matching raw-log file for every encounter found.
+Both report files are mode 0600; the report directory is mode 0700. The
+collector only reads the captured log file and never connects to the database
+or changes containers.
+
 Run it from the deployment repository on the Oracle host:
 
 ```sh
+# Default: report every encounter visible in the collected log tail.
 bash scripts/partybot-diagnostics.sh
+
+# Report one exact encounter ID.
+bash scripts/partybot-diagnostics.sh --encounter-id 123456
+
+# Discover encounters active in a time window, then include their full
+# available timelines (not just lines inside the window).
+bash scripts/partybot-diagnostics.sh \
+  --since 2026-11-19T05:00:00Z --until 2026-11-19T06:00:00Z
 ```
+
+Reports are written to `.partybot/diagnostics/encounters/` as
+`encounter-<id>.md` and `encounter-<id>.raw.log`. If the selected log tail
+contains no structured traces, the default all-encounters mode prints an
+informational message; an explicitly requested ID or time window with no
+matching records is reported as an error.
 
 By default it examines the last 5,000 log lines and considers the Shadow
 heartbeat stale after 120 seconds. Both can be adjusted without editing files:
