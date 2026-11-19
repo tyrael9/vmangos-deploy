@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2026 tyrael9 <https://github.com/tyrael9>
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: PartyBot diagnostics tests
+
+on:
+  push:
+    branches:
+      - master
+      - feature/partybot-encounter-reports
+    paths:
+      - "scripts/partybot-diagnostics.sh"
+      - "scripts/partybot-trace-report.py"
+      - "scripts/test-partybot-diagnostics.sh"
+      - "docs/partybot-testing.md"
+      - ".github/workflows/partybot-diagnostics-check.yml"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "scripts/partybot-diagnostics.sh"
+      - "scripts/partybot-trace-report.py"
+      - "scripts/test-partybot-diagnostics.sh"
+      - "docs/partybot-testing.md"
+      - ".github/workflows/partybot-diagnostics-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics:
+    name: Read-only diagnostics regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Validate shell and Python syntax
+        run: |
+          bash -n scripts/partybot-diagnostics.sh
+          bash -n scripts/test-partybot-diagnostics.sh
+          python3 -m py_compile scripts/partybot-trace-report.py
+
+      - name: Run isolated diagnostics regression
+        run: bash scripts/test-partybot-diagnostics.sh
