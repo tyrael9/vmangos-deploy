@@ -310,6 +310,7 @@ report["recent_shadow_decisions"] = decisions[-50:]
 out = pathlib.Path(output_dir) / "latest.json"
 out.write_text(json.dumps(report, indent=2) + "\n")
 out.chmod(0o600)
+out.chmod(0o600)
 
 print("\nPartyBot diagnostics")
 print("====================")
