@@ -11,8 +11,8 @@ client data.
 - Run the script from a Linux host with Bash, Python 3, Docker, and Docker
   Compose v2 installed.
 - The host must be ARM64. The script rejects images that are not `arm64`.
-- The host must be able to pull `ghcr.io/tyrael9/vmangos-server` (public package
-  access or a prior `docker login ghcr.io` with `read:packages`).
+- The host must be able to pull `ghcr.io/tyrael9/vmangos-server` (public
+  package access or a prior `docker login ghcr.io` with `read:packages`).
 - The repository's normal Compose file (`compose.yaml`) and local configuration
   must already be set up.
 
@@ -58,19 +58,19 @@ To change the health-check timeout for one invocation:
 PARTYBOT_HEALTH_TIMEOUT=900 ./scripts/partybot-deploy.sh deploy partybot-daba395
 ```
 
-
 ## One-command diagnostics
 
 The read-only diagnostics script collects the effective server image/status,
 the two PartyBot config flags, and a timestamped tail of the current
 `mangosd`/`realmd` logs. It parses `[PartyBotShadow]` summaries and
-`[PartyBotShadowDecision]` candidate details, then prints a PASS/WARN/FAIL report. It also writes a mode-0600 JSON report to
+`[PartyBotShadowDecision]` candidate details, then prints a PASS/WARN/FAIL
+report. It also writes a mode-0600 JSON report to
 `.partybot/diagnostics/latest.json`.
 
 When structured `[PartyBotEngineTrace]` records are present in the collected
 log tail, the script invokes the bundled, standard-library-only
-`scripts/partybot-trace-report.py` collector. By default it writes one
-Markdown timeline and one matching raw-log file for every encounter found.
+`scripts/partybot-trace-report.py` collector. By default it writes one Markdown
+timeline and one matching raw-log file for every encounter found.
 Both report files are mode 0600; the report directory is mode 0700. The
 collector only reads the captured log file and never connects to the database
 or changes containers.
@@ -114,10 +114,11 @@ PARTYBOT_DIAGNOSTICS_TAIL=10000 PARTYBOT_DIAGNOSTICS_STALE_SECONDS=180 \
 
 The script uses the deployment helper's effective Compose configuration,
 including its private PartyBot override. It does not restart containers, run
-SQL, inspect or modify database services/volumes, or change configuration.
-The `logs` helper includes Docker timestamps so freshness can be assessed.
+SQL, inspect or modify database services/volumes, or change configuration. The
+`logs` helper includes Docker timestamps so freshness can be assessed.
 
 Interpretation:
+
 - `PlayerBot.EngineShadow=1` and `PlayerBot.DecisionTrace=1` are required for
   heartbeat summaries.
 - Candidate counts depend on live combat state and bot role. Idle groups may
@@ -129,12 +130,12 @@ Interpretation:
   no eligible party bot may be active, the log window may be too short, or
   snapshot construction may not have completed.
 - Shadow decision records are coarse triage/target proposals, not spell-level
-  validation or proof that a target choice is tactically correct. Legacy remains
-  the only action executor.
+  validation or proof that a target choice is tactically correct. Legacy
+  remains the only action executor.
 - The report is a convenience summary of config and logs, not proof of correct
-  in-game decisions. Share `.partybot/diagnostics/latest.json` for analysis;
-  it contains bot/group/map identifiers and should be treated as server
-  diagnostic data.
+  in-game decisions. Share `.partybot/diagnostics/latest.json` for analysis; it
+  contains bot/group/map identifiers and should be treated as server diagnostic
+  data.
 
 ## Roll back
 
@@ -153,10 +154,11 @@ the server so the helper can remember which images are active.
 ## Important Compose note
 
 When a PartyBot override is active, use this helper for image deployment and
-rollback. The helper explicitly includes its private Compose override file.
-A plain `docker compose up -d` does not read that private file and can therefore
+rollback. The helper explicitly includes its private Compose override file. A
+plain `docker compose up -d` does not read that private file and can therefore
 recreate the server with the image references from the base `compose.yaml`.
 
-Regular read-only commands such as `docker compose ps` and `docker compose
-logs` remain safe. Use `./scripts/partybot-deploy.sh status` and `logs` when you
-want the helper's effective Compose configuration to be shown as well.
+Regular read-only commands such as `docker compose ps` and
+`docker compose logs` remain safe. Use `./scripts/partybot-deploy.sh status`
+and `logs` when you want the helper's effective Compose configuration to be
+shown as well.
