@@ -75,13 +75,17 @@ files are mode 0600; the report directory is mode 0700. The collector only
 reads the captured log file and never connects to the database or changes
 containers.
 
-Run the isolated wrapper/collector regression suite from any Linux development host:
+Run the isolated wrapper/collector regression suite from any Linux development
+host:
 
 ```sh
 bash scripts/test-partybot-diagnostics.sh
 ```
 
-The test uses a temporary project tree and fake deployment helper/Docker executable. It verifies all-encounter, exact-ID and time-window selection, full-encounter raw-log retention, private report permissions, and that diagnostics does not invoke Docker.
+The test uses a temporary project tree and fake deployment helper/Docker
+executable. It verifies all-encounter, exact-ID and time-window selection,
+full-encounter raw-log retention, private report permissions, and that
+diagnostics does not invoke Docker.
 
 Run diagnostics from the deployment repository on the Oracle host:
 
