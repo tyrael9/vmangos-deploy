@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 tyrael9 <https://github.com/tyrael9>
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 name: PartyBot diagnostics tests
 
 on:
