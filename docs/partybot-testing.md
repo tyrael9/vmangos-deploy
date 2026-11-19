@@ -70,10 +70,10 @@ report. It also writes a mode-0600 JSON report to
 When structured `[PartyBotEngineTrace]` records are present in the collected
 log tail, the script invokes the bundled, standard-library-only
 `scripts/partybot-trace-report.py` collector. By default it writes one Markdown
-timeline and one matching raw-log file for every encounter found.
-Both report files are mode 0600; the report directory is mode 0700. The
-collector only reads the captured log file and never connects to the database
-or changes containers.
+timeline and one matching raw-log file for every encounter found. Both report
+files are mode 0600; the report directory is mode 0700. The collector only
+reads the captured log file and never connects to the database or changes
+containers.
 
 Run the isolated wrapper/collector regression suite from any Linux development host:
 
